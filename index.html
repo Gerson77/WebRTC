@@ -133,7 +133,7 @@
             })
 
             room.on('data',(message, client)=> {
-                if(client.id === drone.client.Id){
+                if(client.id === drone.clientId){
                     return;
                 }
 
