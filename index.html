@@ -64,7 +64,7 @@
         let pc;
         let number = 0;
 
-        function OnSuccess(){};
+        function onSuccess(){};
 
         function onError(error){
             console.log(error);
@@ -145,7 +145,7 @@
                     },onError)
                 }else if(message.candidate){
                     pc.addIceCandidate(
-                        new RTCIceCandidate(message.candidate),onSuccess, onError
+                        new RTCIceCandidate(message.candidate), onSuccess, onError
                     )
                 }
             })
