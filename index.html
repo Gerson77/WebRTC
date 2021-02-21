@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src='https://cdn.scaledrone.com/scaledrone.min.js'></script>
+    <title>Projeto Vídeo chat</title>
+    <style>
+        .welcome{
+            text-align: center;
+            position: fixed;
+            top: 0;
+            left: 50%;
+            transform: translate(-50%,0);
+        }
+        body{
+            height: 100vh;
+            display: flex;
+            margin: 0;
+            align-items: center;
+            justify-content: center;
+            padding: 0 50px;
+        }
+        video{
+            max-width: calc(50% - 100px);
+            margin: 0 50px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+    
+
+    <div class="welcome">
+        <h2>Bem-Vindo ao chat</h2>
+    </div>
+
+    <video id="localVideo" autoplay muted></video>
+    <video id="remoteVideo" autoplay muted></video>
+
+
+
+    <script>
+        if(!location.hash){
+            location.hash = Math.floor(Math.random() * 0xFFFFFF).toString(16);
+        }
+
+        const roomHash = location.hash.substring(1)
+
+        const drone = new ScaleDrone('yiS12Ts5RdNhebyM');
+
+        const roomName = 'observable-'+roomHash;
+
+        const configuration = {
+            iceServers: [
+                {
+                    urls: 'stun:stun.l.google.com:19302'
+                }
+
+            ]
+        }
+        let room;
+        let pc;
+        let number = 0;
+
+        function OnSuccess(){};
+
+        function onError(error){
+            console.log(error);
+        }
+
+        drone.on('open', error => {
+            if(error)
+                return console.log(error);
+            
+                room = drone.subscribe(roomName);
+
+                room.on('open',error =>{
+                    // Se acontecer erro capturamos aqui
+                });
+
+                room.on('members', members=>{
+                    console.log('Connectado!')
+
+                    //console.log("Conexões abertas: "+members.length);
+                    number = members.length -1;
+                    const isOfferrer = members.length >= 2;
+
+                    startWebRTC(isOfferrer);
+                })
+            
+        })
+
+        function sendMessage(message){
+            drone.publish({
+                room: roomName,
+                message
+            })
+        }
+
+        function startWebRTC(isOfferrer){
+            pc = new RTCPeerConnection(configuration);
+
+            pc.onicecandidate = event => {
+                if(event.candidate){
+                    sendMessage({'candidate': event.candidate});
+                }
+            };
+            if(isOfferrer){
+                pc.onnegotiationneeded = () => {
+                    pc.createOffer().then(localDescCreated).catch(onError);
+                }
+            }
+            pc.ontrack = event => {
+                const stream = event.streams[0];
+
+                if(!remoteVideo.srcObject || remoteVideo.srcObject.id !== stream.id){
+                    remoteVideo.srcObject = stream;
+                }
+            }
+
+            navigator.mediaDevices.getUserMedia({
+                audio: true,
+                video: true,
+            }).then(stream => {
+                localVideo.srcObject = stream;
+                stream.getTracks().forEach(track=>pc.addTrack(track,stream))
+            }, onError)
+
+            room.on('member_leave',function(member){
+                remoteVideo.style.display = 'none';
+            })
+
+            room.on('data',(message, client)=> {
+                if(client.id === drone.client.id){
+                    return;
+                }
+
+                if(message.sdp){
+                    pc.setRemoteDescription(new RTCSessionDescription(message.sdp), () => {
+                        if(pc.remoteDescription.type === 'offer'){
+                            pc.createAnswer().then(localDescCreated).catch(onError);
+                        }
+                    },onError)
+                }else if(message.candidate){
+                    pc.addIceCandidate(
+                        new RTCIceCandidate(),onSuccess, onError
+                    )
+                }
+            })
+
+        }
+        function localDesCreated(desc){
+            pc.setLocalDescription(
+                desc, () => sendMessage({'sdp':pc.localDescription}), onError
+            );
+        }
+        
+    </script>
+
+</body>
+</html>
