@@ -145,7 +145,7 @@
                     },onError)
                 }else if(message.candidate){
                     pc.addIceCandidate(
-                        new RTCIceCandidate(),onSuccess, onError
+                        new RTCIceCandidate(message.candidate),onSuccess, onError
                     )
                 }
             })
