@@ -109,7 +109,7 @@
             };
             if(isOfferrer){
                 pc.onnegotiationneeded = () => {
-                    pc.createOffer().then(localDescCreated).catch(onError);
+                    pc.createOffer().then(localDesCreated).catch(onError);
                 }
             }
             pc.ontrack = event => {
@@ -140,7 +140,7 @@
                 if(message.sdp){
                     pc.setRemoteDescription(new RTCSessionDescription(message.sdp), () => {
                         if(pc.remoteDescription.type === 'offer'){
-                            pc.createAnswer().then(localDescCreated).catch(onError);
+                            pc.createAnswer().then(localDesCreated).catch(onError);
                         }
                     },onError)
                 }else if(message.candidate){
